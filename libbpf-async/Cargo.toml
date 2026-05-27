@@ -1,10 +1,10 @@
 [package]
 name = "libbpf-async"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "library for writing BPF programs in Async Rust, complementary for libbpf-rs"
 license = "LGPL-2.1 OR BSD-2-Clause"
-repository = "https://github.com/fujita/libbpf-async"
+repository = "https://github.com/esperto-input/libbpf-async"
 homepage = "https://github.com/fujita/libbpf-async"
 readme = "../README.md"
 keywords = ["bpf", "libbpf", "async"]
@@ -12,8 +12,8 @@ keywords = ["bpf", "libbpf", "async"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libbpf-rs = "0.22"
-nix = "0.26.2"
-tokio = { version = "1.35", features = ["full"] }
-page_size = "0.5.0"
-futures = "0.3"
+libbpf-rs = "0.26.2"
+nix = { version = "0.31.3", features = ["mman"] }
+tokio = { version = "1.52.3", features = ["full"] }
+page_size = "0.6.0"
+futures = "0.3.32"

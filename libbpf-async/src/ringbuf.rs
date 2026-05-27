@@ -3,7 +3,7 @@
 // Licensed under LGPL-2.1 or BSD-2-Clause.
 
 use core::task::{Context, Poll};
-use libbpf_rs::{query::MapInfoIter, Map};
+use libbpf_rs::{Map, MapCore};
 use std::io::Result;
 use std::num::NonZeroUsize;
 use std::os::fd::{AsFd, AsRawFd, RawFd};
@@ -24,16 +24,9 @@ pub struct RingBuffer {
 
 impl RingBuffer {
     pub fn new(map: &Map) -> Self {
-        let mut max_entries = 0;
-        for m in MapInfoIter::default() {
-            if let Ok(name) = m.name.to_str() {
-                if name == map.name() {
-                    max_entries = m.max_entries;
-                }
-            }
-        }
+        let max_entries = map.max_entries();
         let psize = page_size::get();
-        let fd = map.as_fd().as_raw_fd();
+        let fd = map.as_fd();
         let consumer = unsafe {
             nix::sys::mman::mmap(
                 None,
@@ -44,7 +37,8 @@ impl RingBuffer {
                 0,
             )
             .unwrap()
-        };
+        }
+        .as_ptr();
         let producer = unsafe {
             nix::sys::mman::mmap(
                 None,
@@ -56,11 +50,13 @@ impl RingBuffer {
                 psize as i64,
             )
             .unwrap()
-        };
+        }
+        .as_ptr();
 
         RingBuffer {
             mask: (max_entries - 1) as u64,
-            async_fd: AsyncFd::with_interest(fd, tokio::io::Interest::READABLE).unwrap(),
+            async_fd: AsyncFd::with_interest(fd.as_raw_fd(), tokio::io::Interest::READABLE)
+                .unwrap(),
             consumer,
             producer,
             data: unsafe { producer.add(psize) },
@@ -79,8 +75,11 @@ impl Drop for RingBuffer {
     fn drop(&mut self) {
         let psize = page_size::get();
         unsafe {
-            let _ = nix::sys::mman::munmap(self.consumer, psize);
-            let _ = nix::sys::mman::munmap(self.producer, psize + 2 * (self.mask as usize + 1));
+            let _ = nix::sys::mman::munmap(std::ptr::NonNull::new_unchecked(self.consumer), psize);
+            let _ = nix::sys::mman::munmap(
+                std::ptr::NonNull::new_unchecked(self.producer),
+                psize + 2 * (self.mask as usize + 1),
+            );
         }
     }
 }

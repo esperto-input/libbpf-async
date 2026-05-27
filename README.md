@@ -8,7 +8,7 @@ To use in your project, add into your `Cargo.toml`:
 
 ```toml
 [dependencies]
-libbpf-async = "0.2"
+libbpf-async = "0.3"
 ```
 
 ## Example
@@ -16,10 +16,11 @@ libbpf-async = "0.2"
 ```rust,no_run
 #[tokio::main]
 async fn main() {
+    let mut open_object = std::mem::MaybeUninit::uninit();
     let mut builder = TracerSkelBuilder::default();
-    let mut skel = builder.open().unwrap().load().unwrap();
+    let mut skel = builder.open(&mut open_object).unwrap().load().unwrap();
 
-    let mut rb = libbpf_async::RingBuffer::new(skel.obj.map_mut("ringbuf").unwrap());
+    let mut rb = libbpf_async::RingBuffer::new(&skel.maps.ringbuf);
     loop {
         let mut buf = [0; 128];
         let n = rb.read(&mut buf).await.unwrap();
@@ -28,7 +29,7 @@ async fn main() {
 }
 ```
 
-A working example code can be found [here](https://github.com/fujita/libbpf-async/tree/master/examples).
+A working example code can be found [here](https://github.com/esperto-input/libbpf-async/tree/master/examples).
 
 ## License
 
